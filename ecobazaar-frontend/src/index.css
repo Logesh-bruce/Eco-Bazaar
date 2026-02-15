@@ -1,0 +1,36 @@
+/* 1. Import Google Fonts (MUST BE FIRST) */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* 2. Import Tailwind v4 */
+@import "tailwindcss";
+
+/* 3. Define Custom Fonts & Colors */
+@theme {
+  --color-eco-green: #10B981;
+  --color-eco-dark: #064E3B;
+  --color-eco-light: #D1FAE5;
+  
+  --font-sans: 'Poppins', sans-serif;
+}
+
+/* 4. Global Styles */
+body {
+  font-family: var(--font-sans);
+  background-color: #f9fafb;
+  color: #1f2937;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-eco-green); 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-eco-dark);
+}
