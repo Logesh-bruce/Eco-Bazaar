@@ -4,7 +4,7 @@ EcoBazaar is a full-stack e-commerce platform built to support sustainable and e
 The application supports multiple user roles and provides dedicated dashboards for customers, sellers, and administrators.
 
 This project was developed to understand real-world e-commerce workflows including product management, cart handling, order processing, and role-based access control.
-
+ 
 ---
 
 ## Project Highlights
