@@ -8,7 +8,7 @@ This project was developed to understand real-world e-commerce workflows includi
 ---
 
 ## Project Highlights
-
+ 
 • Secure authentication with role-based access (User, Seller, Admin)  
 • Seller dashboard for managing product listings  
 • Product browsing with search and filtering  
