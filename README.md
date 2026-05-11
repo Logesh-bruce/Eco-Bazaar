@@ -1,5 +1,5 @@
 # EcoBazaar
-
+ 
 EcoBazaar is a full-stack e-commerce platform built to support sustainable and eco-friendly shopping.  
 The application supports multiple user roles and provides dedicated dashboards for customers, sellers, and administrators.
 
