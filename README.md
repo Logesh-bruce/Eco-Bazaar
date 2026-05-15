@@ -6,6 +6,8 @@ The application supports multiple user roles and provides dedicated dashboards f
 This project was developed to understand real-world e-commerce workflows including product management, cart handling, order processing, and role-based access control.
  
 ---
+<img width="1895" height="960" alt="image" src="https://github.com/user-attachments/assets/1bf28cc4-c65a-400b-81e5-3fca476beae2" />
+
 
 ## Project Highlights
  
