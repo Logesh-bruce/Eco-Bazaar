@@ -8,20 +8,12 @@ This project was developed to understand real-world e-commerce workflows includi
  [![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit%20Site-green?style=for-the-badge)](https://eco-bazaar-virid.vercel.app)
 [![Backend API](https://img.shields.io/badge/Backend%20API-Render-blue?style=for-the-badge)](https://ecobazaar-backend-rtw5.onrender.com)
 
-
-
----
-<img width="1895" height="960" alt="image" src="https://github.com/user-attachments/assets/1bf28cc4-c65a-400b-81e5-3fca476beae2" />
-
-
----
-
-
-
 ## 🚀 Live Demo
 
 🌐 **Frontend:** [https://eco-bazaar-virid.vercel.app](https://eco-bazaar-virid.vercel.app)  
 ⚙️ **Backend API:** [https://ecobazaar-backend-rtw5.onrender.com](https://ecobazaar-backend-rtw5.onrender.com)
+---
+<img width="1895" height="960" alt="image" src="https://github.com/user-attachments/assets/1bf28cc4-c65a-400b-81e5-3fca476beae2" />
 
 > ⚠️ The backend runs on Render's free tier — it may take **30–50 seconds** to wake up on first request.
 
