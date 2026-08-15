@@ -6,6 +6,8 @@ import com.example.EcoBazaar_module2.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -78,7 +80,12 @@ public class ProductController {
     @PostMapping("/add")
     public ResponseEntity<?> addProduct(@RequestBody Map<String, Object> request) {
         try {
-            Long userId = Long.valueOf(request.get("userId").toString());
+            // Seller is identified from the validated JWT, not from a client-supplied userId
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || authentication.getPrincipal() == null) {
+                return ResponseEntity.status(401).body(Map.of("error", "Authentication required"));
+            }
+            Long userId = (Long) authentication.getPrincipal();
             String name = request.get("name").toString();
             String description = request.get("description").toString();
             Double price = Double.valueOf(request.get("price").toString());
