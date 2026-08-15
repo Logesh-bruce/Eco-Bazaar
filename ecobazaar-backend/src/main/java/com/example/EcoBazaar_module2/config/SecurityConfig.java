@@ -2,8 +2,10 @@ package com.example.EcoBazaar_module2.config;
 
 import com.example.EcoBazaar_module2.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -17,6 +19,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 import java.util.List;
 
@@ -29,7 +32,6 @@ public class SecurityConfig {
 
     /**
      * PasswordEncoder bean — BCrypt hashing.
-     * Must be a @Bean so AuthService can @Autowired inject it (not create a new instance inline).
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -44,6 +46,17 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
+    /**
+     * Register CorsFilter with HIGHEST_PRECEDENCE so CORS headers are added
+     * before Spring Security filter chain and authentication checks occur.
+     */
+    @Bean
+    public FilterRegistrationBean<CorsFilter> corsFilterRegistrationBean() {
+        FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(new CorsFilter(corsConfigurationSource()));
+        bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        return bean;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -51,7 +64,10 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints — no token required
+                        // 1. Explicitly permit all HTTP OPTIONS preflight requests first
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // 2. Public endpoints — no token required
                         .requestMatchers(
                                 "/",
                                 "/index.html",
@@ -61,13 +77,11 @@ public class SecurityConfig {
                                 "/js/**"
                         ).permitAll()
 
-                        // Product creation — only SELLER or ADMIN roles.
-                        // JWT stores roles as bare strings ("SELLER", "ADMIN") without "ROLE_" prefix,
-                        // so we use hasAnyAuthority() (exact match) instead of hasRole() (auto-prepends "ROLE_").
+                        // 3. Product creation — only SELLER or ADMIN roles
                         .requestMatchers(HttpMethod.POST, "/api/products/add").hasAnyAuthority("SELLER", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/products/**").hasAnyAuthority("SELLER", "ADMIN")
 
-                        // All other endpoints are permitted (controllers handle their own auth checks)
+                        // 4. All other endpoints are permitted (controllers handle their own auth checks)
                         .anyRequest().permitAll()
                 )
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()));
@@ -88,8 +102,8 @@ public class SecurityConfig {
                 "https://eco-bazaar-virid.vercel.app"
         ));
 
-        // All standard HTTP methods
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        // All standard HTTP methods including OPTIONS and HEAD
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
 
         // Allow all headers (Authorization, Content-Type, Accept, Origin, X-Requested-With, etc.)
         configuration.setAllowedHeaders(List.of("*"));

@@ -37,6 +37,7 @@ public class Product {
     private Integer quantity = 1;
 
     // Store Base64 encoded image directly in database
+    @Lob
     @Column(columnDefinition = "TEXT")
     private String imageBase64;
 
