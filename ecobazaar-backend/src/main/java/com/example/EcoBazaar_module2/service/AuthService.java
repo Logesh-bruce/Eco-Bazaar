@@ -4,7 +4,7 @@ import com.example.EcoBazaar_module2.model.Role;
 import com.example.EcoBazaar_module2.model.User;
 import com.example.EcoBazaar_module2.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,7 +14,13 @@ public class AuthService {
     @Autowired
     private UserRepository userRepository;
 
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    /**
+     * Inject the PasswordEncoder bean defined in SecurityConfig.
+     * Do NOT create a new BCryptPasswordEncoder() here — that causes a second instance
+     * which is not the bean managed by Spring, and can cause circular dependency issues.
+     */
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Transactional
     public User registerUser(String email, String password, String fullName, Role role) {

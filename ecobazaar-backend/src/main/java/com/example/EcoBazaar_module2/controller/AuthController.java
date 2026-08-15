@@ -2,6 +2,7 @@ package com.example.EcoBazaar_module2.controller;
 
 import com.example.EcoBazaar_module2.model.Role;
 import com.example.EcoBazaar_module2.model.User;
+import com.example.EcoBazaar_module2.security.JwtUtil;
 import com.example.EcoBazaar_module2.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,9 @@ public class AuthController {
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     /**
      * Register new user
@@ -71,8 +75,12 @@ public class AuthController {
 
             User user = authService.authenticateUser(email, password);
 
-            // Return user info
+            // Generate JWT token for the authenticated user
+            String token = jwtUtil.generateToken(user);
+
+            // Return user info with token
             return ResponseEntity.ok(Map.of(
+                    "token", token,
                     "id", user.getId(),
                     "email", user.getEmail(),
                     "fullName", user.getFullName(),
