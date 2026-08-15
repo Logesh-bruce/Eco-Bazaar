@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Edit, Trash2, Eye, Package } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
-import { getImageSrc, handleImageError } from '../utils/imageUtils';
+import { formatImageSrc, handleImageError } from '../utils/imageUtils';
 
 const SellerDashboard = () => {
     const { user } = useAuth();
@@ -47,13 +47,13 @@ const SellerDashboard = () => {
         <div className="container mx-auto p-6">
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold text-gray-800">Seller Dashboard</h1>
-                <Link to="/seller/add" className="bg-eco-green text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-eco-dark transition">
+                <Link to="/seller/add" className="bg-eco-green text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-eco-dark transition shadow-sm">
                     <Plus size={20} /> Add New Product
                 </Link>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <table className="w-full text-left">
+                <table className="w-full text-left border-collapse">
                     <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
                         <tr>
                             <th className="p-4">Product</th>
@@ -66,7 +66,7 @@ const SellerDashboard = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                         {products.length > 0 ? products.map(product => {
-                            const imgSrc = getImageSrc(product.imageBase64 || product.image || product.imageUrl);
+                            const imgSrc = formatImageSrc(product.imageBase64 || product.imageUrl || product.image);
                             return (
                                 <tr key={product.id} className="hover:bg-gray-50 transition">
                                     <td className="p-4 flex items-center gap-3">
@@ -74,7 +74,7 @@ const SellerDashboard = () => {
                                             src={imgSrc} 
                                             alt={product.name} 
                                             onError={handleImageError}
-                                            className="w-12 h-12 rounded object-cover border" 
+                                            className="w-12 h-12 rounded-md object-cover border border-gray-200 bg-gray-50" 
                                         />
                                         <span className="font-medium text-gray-800">{product.name}</span>
                                     </td>

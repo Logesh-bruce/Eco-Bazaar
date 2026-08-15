@@ -1,23 +1,56 @@
-/* 1. Import Google Fonts (MUST BE FIRST) */
+/* 1. Import Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 /* 2. Import Tailwind v4 */
 @import "tailwindcss";
 
-/* 3. Define Custom Fonts & Colors */
+/* 3. Define Custom Theme Tokens */
 @theme {
   --color-eco-green: #10B981;
   --color-eco-dark: #064E3B;
   --color-eco-light: #D1FAE5;
-  
   --font-sans: 'Poppins', sans-serif;
 }
 
-/* 4. Global Styles */
+/* 4. Fallback Custom Color Classes for 100% Production Reliability */
+.bg-eco-green {
+  background-color: #10B981 !important;
+}
+.hover\:bg-eco-dark:hover {
+  background-color: #064E3B !important;
+}
+.bg-eco-dark {
+  background-color: #064E3B !important;
+}
+.bg-eco-light {
+  background-color: #D1FAE5 !important;
+}
+.text-eco-green {
+  color: #10B981 !important;
+}
+.text-eco-dark {
+  color: #064E3B !important;
+}
+.text-eco-light {
+  color: #D1FAE5 !important;
+}
+.border-eco-green {
+  border-color: #10B981 !important;
+}
+.focus\:border-eco-green:focus {
+  border-color: #10B981 !important;
+}
+.focus\:ring-eco-green:focus {
+  --tw-ring-color: #10B981 !important;
+}
+
+/* 5. Global Styles */
 body {
-  font-family: var(--font-sans);
+  font-family: 'Poppins', sans-serif;
   background-color: #f9fafb;
   color: #1f2937;
+  margin: 0;
+  padding: 0;
 }
 
 /* Custom Scrollbar */
@@ -28,9 +61,9 @@ body {
   background: #f1f1f1;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-eco-green); 
+  background: #10B981; 
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-eco-dark);
+  background: #064E3B;
 }
