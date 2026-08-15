@@ -38,8 +38,7 @@ public class Product {
     @Column(nullable = false)
     private Integer quantity = 1;
 
-    // Store Base64 encoded image directly in database
-    @Lob
+    // Store Base64 encoded image directly in database as TEXT (without @Lob to avoid PostgreSQL OID issues)
     @Column(columnDefinition = "TEXT")
     private String imageBase64;
 

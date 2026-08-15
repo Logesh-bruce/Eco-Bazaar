@@ -12,6 +12,7 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -35,15 +36,18 @@ public class ProductService {
     public Page<Product> searchProductsEnhanced(String name, String category, Double minPrice,
                                                 Double maxPrice, Double minCarbon, Double maxCarbon,
                                                 Boolean featured, String sortBy, int page, int size) {
+        String cleanName = (name != null && !name.trim().isEmpty()) ? name.trim() : null;
+        String cleanCategory = (category != null && !category.equalsIgnoreCase("All") && !category.trim().isEmpty()) ? category.trim() : null;
+
         // Determine sort order
         Sort sort = getSortOrder(sortBy);
-        Pageable pageable = PageRequest.of(page, size, sort);
+        Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), sort);
 
         // Use carbon filter query if carbon parameters are provided
         if (minCarbon != null || maxCarbon != null) {
             return productRepository.searchProductsWithCarbonFilter(
-                    name,
-                    (category != null && !category.equals("All")) ? category : null,
+                    cleanName,
+                    cleanCategory,
                     minPrice,
                     maxPrice,
                     minCarbon,
@@ -53,8 +57,8 @@ public class ProductService {
             );
         } else {
             return productRepository.searchProducts(
-                    name,
-                    (category != null && !category.equals("All")) ? category : null,
+                    cleanName,
+                    cleanCategory,
                     minPrice,
                     maxPrice,
                     featured,
@@ -83,11 +87,7 @@ public class ProductService {
             case "newest":
                 return Sort.by("createdAt").descending();
             case "carbon_asc":
-                // Note: Sorting by carbon requires custom handling as it's in related entity
-                // For simplicity, we'll default to created date and filter in application layer if needed
-                return Sort.by("createdAt").descending();
             case "carbon_desc":
-                return Sort.by("createdAt").descending();
             default:
                 return Sort.by("createdAt").descending();
         }
@@ -101,17 +101,21 @@ public class ProductService {
     @Transactional
     public void incrementProductView(Long productId) {
         Product product = getProductById(productId);
-        product.incrementViewCount();
-        productRepository.save(product);
+        if (product != null) {
+            product.incrementViewCount();
+            productRepository.save(product);
+        }
     }
 
     public List<Product> getFeaturedProducts() {
-        return productRepository.findByFeaturedTrueAndVerifiedTrueAndActiveTrue();
+        List<Product> products = productRepository.findByFeaturedTrueAndVerifiedTrueAndActiveTrue();
+        return products != null ? products : Collections.emptyList();
     }
 
     public List<Product> getTrendingProducts() {
         Pageable topTen = PageRequest.of(0, 10, Sort.by("soldCount").descending());
-        return productRepository.findByVerifiedTrueAndActiveTrue(topTen);
+        List<Product> products = productRepository.findByVerifiedTrueAndActiveTrue(topTen);
+        return products != null ? products : Collections.emptyList();
     }
 
     @Transactional
@@ -128,8 +132,8 @@ public class ProductService {
         Product product = new Product();
         product.setName(name);
         product.setDescription(description);
-        product.setPrice(price);
-        product.setQuantity(quantity);
+        product.setPrice(price != null ? price : 0.0);
+        product.setQuantity(quantity != null ? quantity : 1);
         product.setCategory(category);
         product.setImageBase64(imageBase64);
         product.setSeller(seller);
@@ -137,6 +141,10 @@ public class ProductService {
         product.setVerified(seller.getRole() == Role.ADMIN);
 
         Product savedProduct = productRepository.save(product);
+
+        if (carbonData == null) {
+            carbonData = new ProductCarbonData();
+        }
 
         if (isCarbonDataEmpty(carbonData)) {
             calculateAutomaticCarbon(carbonData, category, price);
@@ -165,8 +173,8 @@ public class ProductService {
 
         product.setName(name);
         product.setDescription(description);
-        product.setPrice(price);
-        product.setQuantity(quantity);
+        product.setPrice(price != null ? price : 0.0);
+        product.setQuantity(quantity != null ? quantity : 1);
         product.setCategory(category);
 
         if (imageBase64 != null && !imageBase64.isEmpty()) {
@@ -179,6 +187,10 @@ public class ProductService {
             }
 
             ProductCarbonData existingData = product.getCarbonData();
+            if (existingData == null) {
+                existingData = new ProductCarbonData();
+                existingData.setProduct(product);
+            }
             if (isCarbonDataEmpty(newCarbonData)) {
                 calculateAutomaticCarbon(existingData, category, price);
             } else {
@@ -229,11 +241,16 @@ public class ProductService {
     }
 
     public List<Product> getSellerProducts(Long sellerId) {
-        return productRepository.findBySellerId(sellerId);
+        if (sellerId == null) {
+            return Collections.emptyList();
+        }
+        List<Product> products = productRepository.findBySellerId(sellerId);
+        return products != null ? products : Collections.emptyList();
     }
 
     public List<Product> getPendingProducts() {
-        return productRepository.findByVerifiedFalse();
+        List<Product> products = productRepository.findByVerifiedFalse();
+        return products != null ? products : Collections.emptyList();
     }
 
     @Transactional
@@ -245,8 +262,13 @@ public class ProductService {
     }
 
     private boolean isCarbonDataEmpty(ProductCarbonData data) {
-        return data.getManufacturing() == 0 && data.getTransportation() == 0 &&
-                data.getPackaging() == 0 && data.getUsage() == 0 && data.getDisposal() == 0;
+        if (data == null) return true;
+        double m = data.getManufacturing() != null ? data.getManufacturing() : 0.0;
+        double t = data.getTransportation() != null ? data.getTransportation() : 0.0;
+        double p = data.getPackaging() != null ? data.getPackaging() : 0.0;
+        double u = data.getUsage() != null ? data.getUsage() : 0.0;
+        double d = data.getDisposal() != null ? data.getDisposal() : 0.0;
+        return m == 0.0 && t == 0.0 && p == 0.0 && u == 0.0 && d == 0.0;
     }
 
     private void calculateAutomaticCarbon(ProductCarbonData data, String category, Double price) {
