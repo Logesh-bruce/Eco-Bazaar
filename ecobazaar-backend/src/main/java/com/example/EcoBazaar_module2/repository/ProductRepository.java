@@ -14,6 +14,8 @@ import java.util.List;
 public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByVerifiedTrue();
     List<Product> findByVerifiedFalse();
+    List<Product> findByStatusIgnoreCase(String status);
+    List<Product> findByStatusInIgnoreCase(List<String> statuses);
     List<Product> findBySellerId(Long sellerId);
     List<Product> findBySeller_Id(Long sellerId);
     List<Product> findByCategory(String category);
@@ -23,9 +25,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByFeaturedTrueAndVerifiedTrueAndActiveTrue();
     List<Product> findByVerifiedTrueAndActiveTrue(Pageable pageable);
 
-    // Pending products query handling false and null verification status
-    @Query("SELECT p FROM Product p WHERE p.verified = false OR p.verified IS NULL")
+    // Pending products query handling status and verified flags
+    @Query("SELECT p FROM Product p WHERE p.verified = false OR p.verified IS NULL OR UPPER(p.status) = 'PENDING' OR p.status IS NULL")
     List<Product> findPendingProducts();
+
+    // Approved products query
+    @Query("SELECT p FROM Product p WHERE p.verified = true OR UPPER(p.status) = 'APPROVED'")
+    List<Product> findApprovedProducts();
 
     /**
      * Enhanced search with multiple filters and sorting
@@ -33,7 +39,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
      * Supports sorting via Pageable
      */
     @Query("SELECT p FROM Product p WHERE " +
-            "p.verified = true AND p.active = true AND " +
+            "(p.verified = true OR UPPER(p.status) = 'APPROVED' OR p.status IS NULL) AND " +
+            "(p.active = true OR p.active IS NULL) AND " +
             "(:name IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
             "(:category IS NULL OR p.category = :category) AND " +
             "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
@@ -49,17 +56,17 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     );
 
     /**
-     * Search products with carbon footprint filter
-     * This requires joining with ProductCarbonData
+     * Search products with carbon footprint filter using COALESCE for null-safety
      */
     @Query("SELECT p FROM Product p LEFT JOIN p.carbonData cd WHERE " +
-            "p.verified = true AND p.active = true AND " +
+            "(p.verified = true OR UPPER(p.status) = 'APPROVED' OR p.status IS NULL) AND " +
+            "(p.active = true OR p.active IS NULL) AND " +
             "(:name IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
             "(:category IS NULL OR p.category = :category) AND " +
             "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
             "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
-            "(:minCarbon IS NULL OR (cd.manufacturing + cd.transportation + cd.packaging + cd.usage + cd.disposal) >= :minCarbon) AND " +
-            "(:maxCarbon IS NULL OR (cd.manufacturing + cd.transportation + cd.packaging + cd.usage + cd.disposal) <= :maxCarbon) AND " +
+            "(:minCarbon IS NULL OR (COALESCE(cd.manufacturing, 0.0) + COALESCE(cd.transportation, 0.0) + COALESCE(cd.packaging, 0.0) + COALESCE(cd.usage, 0.0) + COALESCE(cd.disposal, 0.0)) >= :minCarbon) AND " +
+            "(:maxCarbon IS NULL OR (COALESCE(cd.manufacturing, 0.0) + COALESCE(cd.transportation, 0.0) + COALESCE(cd.packaging, 0.0) + COALESCE(cd.usage, 0.0) + COALESCE(cd.disposal, 0.0)) <= :maxCarbon) AND " +
             "(:featured IS NULL OR p.featured = :featured)")
     Page<Product> searchProductsWithCarbonFilter(
             @Param("name") String name,

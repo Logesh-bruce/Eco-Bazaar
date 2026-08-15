@@ -56,6 +56,10 @@ public class Product {
     @Column(nullable = false)
     private boolean verified = false;
 
+    // Explicit approval status ("PENDING", "APPROVED", "REJECTED")
+    @Column(name = "status", length = 50)
+    private String status = "PENDING";
+
     @Column(nullable = false)
     private boolean featured = false;
 
@@ -84,6 +88,16 @@ public class Product {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    public void setVerified(boolean verified) {
+        this.verified = verified;
+        this.status = verified ? "APPROVED" : "PENDING";
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+        this.verified = status != null && "APPROVED".equalsIgnoreCase(status.trim());
+    }
 
     // Helper method to get image for display
     @Transient

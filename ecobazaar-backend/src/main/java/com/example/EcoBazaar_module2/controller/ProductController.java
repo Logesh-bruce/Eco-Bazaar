@@ -216,11 +216,14 @@ public class ProductController {
         }
     }
 
-    @PutMapping("/admin/verify/{id}")
-    public ResponseEntity<?> verifyProduct(@PathVariable Long id, @RequestParam Long adminId) {
+    @PutMapping({"/admin/verify/{id}", "/admin/approve/{id}"})
+    public ResponseEntity<?> verifyProduct(@PathVariable Long id, @RequestParam(required = false, defaultValue = "1") Long adminId) {
         try {
-            productService.verifyProduct(adminId, id);
-            return ResponseEntity.ok(Map.of("message", "Product verified"));
+            Product product = productService.verifyProduct(adminId, id);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Product verified and approved!",
+                    "product", toProductDTO(product)
+            ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -247,6 +250,7 @@ public class ProductController {
         dto.put("category", product.getCategory() != null ? product.getCategory() : "");
         dto.put("carbonFootprint", product.getTotalCarbonFootprint() != null ? product.getTotalCarbonFootprint() : 0.0);
         dto.put("ecoRating", product.getEcoRating() != null ? product.getEcoRating() : "A+");
+        dto.put("status", product.getStatus() != null ? product.getStatus() : (product.isVerified() ? "APPROVED" : "PENDING"));
         dto.put("verified", product.isVerified());
         dto.put("featured", product.isFeatured());
 

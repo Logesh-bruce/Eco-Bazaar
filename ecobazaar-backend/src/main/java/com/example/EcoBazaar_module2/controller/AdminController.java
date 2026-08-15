@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -68,5 +69,79 @@ public class AdminController {
             stats.put("pendingApprovals", 0L);
             return ResponseEntity.ok(stats);
         }
+    }
+
+    /**
+     * GET /api/admin/products/pending or /api/admin/pending
+     * Returns all unapproved products
+     */
+    @GetMapping(value = {"/products/pending", "/pending"})
+    public ResponseEntity<List<Map<String, Object>>> getPendingProducts() {
+        try {
+            List<Product> products = productService.getPendingProducts();
+            if (products == null || products.isEmpty()) {
+                return ResponseEntity.ok(Collections.emptyList());
+            }
+            return ResponseEntity.ok(products.stream()
+                    .filter(Objects::nonNull)
+                    .map(this::toProductDTO)
+                    .collect(Collectors.toList()));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+    }
+
+    /**
+     * PUT /api/admin/products/{id}/approve or /verify
+     * Approves a product and sets status to APPROVED
+     */
+    @PutMapping(value = {"/products/{id}/approve", "/products/{id}/verify", "/verify/{id}"})
+    public ResponseEntity<?> approveProduct(
+            @PathVariable Long id,
+            @RequestParam(required = false, defaultValue = "1") Long adminId) {
+        try {
+            Product product = productService.verifyProduct(adminId, id);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Product approved and live!",
+                    "product", toProductDTO(product)
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    private Map<String, Object> toProductDTO(Product product) {
+        if (product == null) {
+            return Collections.emptyMap();
+        }
+        Map<String, Object> dto = new HashMap<>();
+        dto.put("id", product.getId());
+        dto.put("name", product.getName() != null ? product.getName() : "");
+        dto.put("description", product.getDescription() != null ? product.getDescription() : "");
+        dto.put("price", product.getPrice() != null ? product.getPrice() : 0.0);
+        dto.put("quantity", product.getQuantity() != null ? product.getQuantity() : 0);
+        dto.put("imageUrl", product.getImageUrl() != null ? product.getImageUrl() : "");
+        dto.put("category", product.getCategory() != null ? product.getCategory() : "");
+        dto.put("status", product.getStatus() != null ? product.getStatus() : (product.isVerified() ? "APPROVED" : "PENDING"));
+        dto.put("verified", product.isVerified());
+        dto.put("featured", product.isFeatured());
+
+        if (product.getSeller() != null) {
+            dto.put("sellerId", product.getSeller().getId());
+            dto.put("sellerName", product.getSeller().getFullName() != null ? product.getSeller().getFullName() : "Seller");
+        } else {
+            dto.put("sellerId", null);
+            dto.put("sellerName", "Seller");
+        }
+
+        dto.put("carbonFootprint", product.getTotalCarbonFootprint() != null ? product.getTotalCarbonFootprint() : 0.0);
+        dto.put("ecoRating", product.getEcoRating() != null ? product.getEcoRating() : "A+");
+        dto.put("viewCount", product.getViewCount() != null ? product.getViewCount() : 0);
+        dto.put("soldCount", product.getSoldCount() != null ? product.getSoldCount() : 0);
+        dto.put("averageRating", product.getAverageRating() != null ? product.getAverageRating() : 0.0);
+        dto.put("reviewCount", product.getReviewCount() != null ? product.getReviewCount() : 0);
+        dto.put("createdAt", product.getCreatedAt());
+
+        return dto;
     }
 }

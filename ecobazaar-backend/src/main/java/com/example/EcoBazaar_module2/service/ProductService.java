@@ -257,11 +257,13 @@ public class ProductService {
     }
 
     @Transactional
-    public void verifyProduct(Long adminId, Long productId) {
+    public Product verifyProduct(Long adminId, Long productId) {
         Product product = getProductById(productId);
         product.setVerified(true);
-        productRepository.save(product);
+        product.setStatus("APPROVED");
+        Product saved = productRepository.save(product);
         auditService.log(adminId, "VERIFY_PRODUCT", "PRODUCT", productId, null);
+        return saved;
     }
 
     private boolean isCarbonDataEmpty(ProductCarbonData data) {
