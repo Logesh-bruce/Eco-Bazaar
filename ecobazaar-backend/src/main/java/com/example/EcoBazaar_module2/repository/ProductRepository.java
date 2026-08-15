@@ -23,6 +23,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByFeaturedTrueAndVerifiedTrueAndActiveTrue();
     List<Product> findByVerifiedTrueAndActiveTrue(Pageable pageable);
 
+    // Pending products query handling false and null verification status
+    @Query("SELECT p FROM Product p WHERE p.verified = false OR p.verified IS NULL")
+    List<Product> findPendingProducts();
+
     /**
      * Enhanced search with multiple filters and sorting
      * Filters: name, category, price range, carbon footprint range, featured status

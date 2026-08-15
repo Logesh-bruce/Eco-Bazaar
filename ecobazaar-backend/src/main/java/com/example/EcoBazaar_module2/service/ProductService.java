@@ -249,7 +249,10 @@ public class ProductService {
     }
 
     public List<Product> getPendingProducts() {
-        List<Product> products = productRepository.findByVerifiedFalse();
+        List<Product> products = productRepository.findPendingProducts();
+        if (products == null || products.isEmpty()) {
+            products = productRepository.findByVerifiedFalse();
+        }
         return products != null ? products : Collections.emptyList();
     }
 

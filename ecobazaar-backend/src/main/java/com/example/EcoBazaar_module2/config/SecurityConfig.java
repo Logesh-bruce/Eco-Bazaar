@@ -77,11 +77,16 @@ public class SecurityConfig {
                                 "/js/**"
                         ).permitAll()
 
-                        // 3. Product creation — only SELLER or ADMIN roles
-                        .requestMatchers(HttpMethod.POST, "/api/products/add").hasAnyAuthority("SELLER", "ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/products/**").hasAnyAuthority("SELLER", "ADMIN")
+                        // 3. Admin endpoints — allow ADMIN or ROLE_ADMIN
+                        .requestMatchers("/api/admin/**").hasAnyAuthority("ADMIN", "ROLE_ADMIN")
+                        .requestMatchers("/api/products/admin/**").hasAnyAuthority("ADMIN", "ROLE_ADMIN")
+                        .requestMatchers("/api/dashboard/admin/**").hasAnyAuthority("ADMIN", "ROLE_ADMIN")
 
-                        // 4. All other endpoints are permitted (controllers handle their own auth checks)
+                        // 4. Product creation — only SELLER or ADMIN roles
+                        .requestMatchers(HttpMethod.POST, "/api/products/add").hasAnyAuthority("SELLER", "ROLE_SELLER", "ADMIN", "ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/products/**").hasAnyAuthority("SELLER", "ROLE_SELLER", "ADMIN", "ROLE_ADMIN")
+
+                        // 5. All other endpoints are permitted (controllers handle their own auth checks)
                         .anyRequest().permitAll()
                 )
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()));

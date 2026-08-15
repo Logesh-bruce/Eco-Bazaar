@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -37,13 +38,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Long userId = jwtUtil.getUserIdFromToken(token);
 
                 // Extract the actual role from the JWT claims (e.g. "SELLER", "USER", "ADMIN")
-                // and map it to a SimpleGrantedAuthority so Spring Security's
-                // .authenticated() / .hasAuthority() checks work correctly.
-                String role = jwtUtil.getRoleFromToken(token);
-                SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role);
+                // and map it to both "ROLE_X" and "X" SimpleGrantedAuthorities so both
+                // hasRole() and hasAuthority() match seamlessly.
+                String rawRole = jwtUtil.getRoleFromToken(token);
+                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                if (rawRole != null && !rawRole.trim().isEmpty()) {
+                    String cleanRole = rawRole.trim().replace("ROLE_", "").toUpperCase();
+                    authorities.add(new SimpleGrantedAuthority(cleanRole));
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + cleanRole));
+                } else {
+                    authorities.add(new SimpleGrantedAuthority("USER"));
+                    authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+                }
 
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userId, null, List.of(authority));
+                        userId, null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         }
