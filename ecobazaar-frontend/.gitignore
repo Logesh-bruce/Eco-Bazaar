@@ -28,3 +28,5 @@ Thumbs.db
 .env
 .env.local
 .env.*
+# But DO commit the example template
+!.env.example
