@@ -10,10 +10,6 @@ const api = axios.create({
 /**
  * Request interceptor — automatically attaches the JWT token from localStorage
  * to every outgoing request as "Authorization: Bearer <token>".
- *
- * This is the fix for the 403 Forbidden on POST /api/products/add:
- * without this, the token was never sent and the backend rejected all
- * authenticated endpoints.
  */
 api.interceptors.request.use(
     (config) => {
@@ -25,7 +21,6 @@ api.interceptors.request.use(
                     config.headers['Authorization'] = `Bearer ${userData.token}`;
                 }
             } catch (e) {
-                // Ignore malformed localStorage data
                 console.warn('Could not parse eco_user from localStorage:', e);
             }
         }
@@ -35,15 +30,19 @@ api.interceptors.request.use(
 );
 
 /**
- * Response interceptor — handles 401 Unauthorized globally.
- * If a token is expired or invalid, clear localStorage and redirect to login.
+ * Response interceptor — handles 401 Unauthorized globally for authenticated API calls.
+ * IMPORTANT: Excludes /auth/login and /auth/register so failed authentication attempts
+ * do NOT trigger a full page reload or wipe the form input fields.
  */
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
+        const isAuthEndpoint = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/register');
+        if (error.response?.status === 401 && !isAuthEndpoint) {
             localStorage.removeItem('eco_user');
-            window.location.href = '/login';
+            if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }

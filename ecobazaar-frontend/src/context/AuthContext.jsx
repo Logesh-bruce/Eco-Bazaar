@@ -11,7 +11,12 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         const storedUser = localStorage.getItem('eco_user');
         if (storedUser) {
-            setUser(JSON.parse(storedUser));
+            try {
+                setUser(JSON.parse(storedUser));
+            } catch (e) {
+                console.error("Failed to parse stored user:", e);
+                localStorage.removeItem('eco_user');
+            }
         }
         setLoading(false);
     }, []);
@@ -20,34 +25,57 @@ export const AuthProvider = ({ children }) => {
         try {
             const response = await api.post('/auth/login', { email, password });
             
-            // Backend returns: { id, email, fullName, role }
+            // Backend returns: { token, id, email, fullName, role }
             const userData = response.data;
             
             setUser(userData);
             localStorage.setItem('eco_user', JSON.stringify(userData));
-            return { success: true };
+            return { success: true, user: userData };
         } catch (error) {
-            console.error("Login failed:", error);
+            console.error("Login error details:", error);
+            let message = "Login failed. Please check your credentials.";
+            
+            if (error.response?.data?.error) {
+                message = error.response.data.error;
+            } else if (error.response?.data?.message) {
+                message = error.response.data.message;
+            } else if (error.code === 'ERR_NETWORK' || !error.response) {
+                message = "Unable to connect to server. If the backend is waking up (cold start), please wait 15-30 seconds and try again.";
+            } else if (error.response?.status === 401) {
+                message = "Invalid email or password.";
+            }
+            
             return { 
                 success: false, 
-                message: error.response?.data?.error || "Login failed" 
+                message 
             };
         }
     };
 
     const register = async (email, password, fullName, role) => {
         try {
-            await api.post('/auth/register', { 
+            const response = await api.post('/auth/register', { 
                 email, 
                 password, 
                 fullName, 
                 role 
             });
-            return { success: true };
+            return { success: true, data: response.data };
         } catch (error) {
+            console.error("Registration error details:", error);
+            let message = "Registration failed.";
+            
+            if (error.response?.data?.error) {
+                message = error.response.data.error;
+            } else if (error.response?.data?.message) {
+                message = error.response.data.message;
+            } else if (error.code === 'ERR_NETWORK' || !error.response) {
+                message = "Unable to connect to server. Please wait a moment and try again.";
+            }
+            
             return { 
                 success: false, 
-                message: error.response?.data?.error || "Registration failed" 
+                message 
             };
         }
     };
@@ -55,7 +83,6 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         setUser(null);
         localStorage.removeItem('eco_user');
-        // Optional: Redirect to home page
         window.location.href = '/';
     };
 
