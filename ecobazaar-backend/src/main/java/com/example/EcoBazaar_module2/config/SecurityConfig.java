@@ -79,18 +79,23 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Allowed frontend origins
-        configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
+        // Allowed frontend origins (supports patterns for dynamic localhost ports & Vercel deployment subdomains)
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "https://*.vercel.app",
+                "https://eco-bazaar-mg.vercel.app",
                 "https://eco-bazaar-virid.vercel.app"
         ));
 
         // All standard HTTP methods
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
 
-        // Allow Authorization, Content-Type, and any other headers
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
+        // Allow all headers (Authorization, Content-Type, Accept, Origin, X-Requested-With, etc.)
+        configuration.setAllowedHeaders(List.of("*"));
+
+        // Exposed headers
+        configuration.setExposedHeaders(List.of("Authorization", "Content-Type", "Content-Disposition"));
 
         // Allow credentials (cookies / auth headers)
         configuration.setAllowCredentials(true);

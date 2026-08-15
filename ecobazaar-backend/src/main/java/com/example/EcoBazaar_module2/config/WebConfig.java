@@ -14,9 +14,16 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins(FRONTEND_URL, "http://127.0.0.1:5173")
+                .allowedOriginPatterns(
+                        "http://localhost:*",
+                        "http://127.0.0.1:*",
+                        "https://*.vercel.app",
+                        "https://eco-bazaar-mg.vercel.app",
+                        "https://eco-bazaar-virid.vercel.app"
+                )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
-                .allowedHeaders("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With")
+                .allowedHeaders("*")
+                .exposedHeaders("Authorization", "Content-Type", "Content-Disposition")
                 .allowCredentials(true)
                 .maxAge(3600);
     }
