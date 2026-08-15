@@ -22,15 +22,6 @@ public class ProductController {
 
     /**
      * Enhanced search with comprehensive filtering and sorting
-     *
-     * Query Parameters:
-     * - search: Product name search
-     * - category: Filter by category
-     * - minPrice, maxPrice: Price range filter
-     * - minCarbon, maxCarbon: Carbon footprint range filter
-     * - featured: Filter featured products
-     * - sortBy: price_asc, price_desc, carbon_asc, carbon_desc, rating, popular, newest
-     * - page, size: Pagination
      */
     @GetMapping
     public ResponseEntity<Map<String, Object>> searchProducts(
@@ -51,6 +42,7 @@ public class ProductController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("products", productPage.getContent().stream()
+                .filter(Objects::nonNull)
                 .map(this::toProductDTO)
                 .collect(Collectors.toList()));
         response.put("currentPage", productPage.getNumber());
@@ -63,16 +55,27 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> getProduct(@PathVariable Long id) {
-        Product product = productService.getProductById(id);
-        productService.incrementProductView(id);
-        return ResponseEntity.ok(toProductDTO(product));
+    public ResponseEntity<?> getProduct(@PathVariable Long id) {
+        try {
+            Product product = productService.getProductById(id);
+            if (product == null) {
+                return ResponseEntity.status(404).body(Map.of("error", "Product not found"));
+            }
+            productService.incrementProductView(id);
+            return ResponseEntity.ok(toProductDTO(product));
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+        }
     }
 
     @GetMapping("/featured")
     public ResponseEntity<List<Map<String, Object>>> getFeaturedProducts() {
         List<Product> products = productService.getFeaturedProducts();
+        if (products == null) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
         return ResponseEntity.ok(products.stream()
+                .filter(Objects::nonNull)
                 .map(this::toProductDTO)
                 .collect(Collectors.toList()));
     }
@@ -80,17 +83,16 @@ public class ProductController {
     @PostMapping("/add")
     public ResponseEntity<?> addProduct(@RequestBody Map<String, Object> request) {
         try {
-            // Seller is identified from the validated JWT, not from a client-supplied userId
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (authentication == null || authentication.getPrincipal() == null) {
                 return ResponseEntity.status(401).body(Map.of("error", "Authentication required"));
             }
             Long userId = (Long) authentication.getPrincipal();
-            String name = request.get("name").toString();
-            String description = request.get("description").toString();
-            Double price = Double.valueOf(request.get("price").toString());
+            String name = request.get("name") != null ? request.get("name").toString() : "";
+            String description = request.get("description") != null ? request.get("description").toString() : "";
+            Double price = request.get("price") != null ? Double.valueOf(request.get("price").toString()) : 0.0;
             Integer quantity = Integer.valueOf(request.getOrDefault("quantity", 1).toString());
-            String category = request.get("category").toString();
+            String category = request.get("category") != null ? request.get("category").toString() : "";
             String imageBase64 = request.getOrDefault("imageBase64", "").toString();
 
             ProductCarbonData carbonData = new ProductCarbonData();
@@ -113,11 +115,11 @@ public class ProductController {
     public ResponseEntity<?> updateProduct(@PathVariable Long id, @RequestBody Map<String, Object> request) {
         try {
             Long userId = Long.valueOf(request.get("userId").toString());
-            String name = request.get("name").toString();
-            String description = request.get("description").toString();
-            Double price = Double.valueOf(request.get("price").toString());
+            String name = request.get("name") != null ? request.get("name").toString() : "";
+            String description = request.get("description") != null ? request.get("description").toString() : "";
+            Double price = request.get("price") != null ? Double.valueOf(request.get("price").toString()) : 0.0;
             Integer quantity = Integer.valueOf(request.getOrDefault("quantity", 1).toString());
-            String category = request.get("category").toString();
+            String category = request.get("category") != null ? request.get("category").toString() : "";
             String imageBase64 = request.getOrDefault("imageBase64", "").toString();
 
             ProductCarbonData carbonData = new ProductCarbonData();
@@ -156,18 +158,37 @@ public class ProductController {
         }
     }
 
+    /**
+     * Fetch products for a specific seller with full null safety and exception handling
+     */
     @GetMapping("/seller/{sellerId}")
-    public ResponseEntity<List<Map<String, Object>>> getSellerProducts(@PathVariable Long sellerId) {
-        List<Product> products = productService.getSellerProducts(sellerId);
-        return ResponseEntity.ok(products.stream()
-                .map(this::toProductDTO)
-                .collect(Collectors.toList()));
+    public ResponseEntity<?> getSellerProducts(@PathVariable Long sellerId) {
+        try {
+            if (sellerId == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Seller ID is required"));
+            }
+            List<Product> products = productService.getSellerProducts(sellerId);
+            if (products == null) {
+                return ResponseEntity.ok(Collections.emptyList());
+            }
+            List<Map<String, Object>> response = products.stream()
+                    .filter(Objects::nonNull)
+                    .map(this::toProductDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to retrieve seller products: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/admin/pending")
     public ResponseEntity<List<Map<String, Object>>> getPendingProducts() {
         List<Product> products = productService.getPendingProducts();
+        if (products == null) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
         return ResponseEntity.ok(products.stream()
+                .filter(Objects::nonNull)
                 .map(this::toProductDTO)
                 .collect(Collectors.toList()));
     }
@@ -182,34 +203,48 @@ public class ProductController {
         }
     }
 
+    /**
+     * Map entity to clean DTO map with comprehensive null-safety checks
+     */
     private Map<String, Object> toProductDTO(Product product) {
+        if (product == null) {
+            return Collections.emptyMap();
+        }
         Map<String, Object> dto = new HashMap<>();
         dto.put("id", product.getId());
-        dto.put("name", product.getName());
-        dto.put("description", product.getDescription());
-        dto.put("price", product.getPrice());
-        dto.put("quantity", product.getQuantity());
-        dto.put("imageUrl", product.getImageUrl());
-        dto.put("category", product.getCategory());
-        dto.put("carbonFootprint", product.getTotalCarbonFootprint());
-        dto.put("ecoRating", product.getEcoRating());
+        dto.put("name", product.getName() != null ? product.getName() : "");
+        dto.put("description", product.getDescription() != null ? product.getDescription() : "");
+        dto.put("price", product.getPrice() != null ? product.getPrice() : 0.0);
+        dto.put("quantity", product.getQuantity() != null ? product.getQuantity() : 0);
+        dto.put("imageUrl", product.getImageUrl() != null ? product.getImageUrl() : "");
+        dto.put("category", product.getCategory() != null ? product.getCategory() : "");
+        dto.put("carbonFootprint", product.getTotalCarbonFootprint() != null ? product.getTotalCarbonFootprint() : 0.0);
+        dto.put("ecoRating", product.getEcoRating() != null ? product.getEcoRating() : "A+");
         dto.put("verified", product.isVerified());
         dto.put("featured", product.isFeatured());
-        dto.put("sellerId", product.getSeller().getId());
-        dto.put("sellerName", product.getSeller().getFullName());
-        dto.put("viewCount", product.getViewCount());
-        dto.put("soldCount", product.getSoldCount());
-        dto.put("averageRating", product.getAverageRating());
-        dto.put("reviewCount", product.getReviewCount());
+
+        // Safe seller null checks
+        if (product.getSeller() != null) {
+            dto.put("sellerId", product.getSeller().getId());
+            dto.put("sellerName", product.getSeller().getFullName() != null ? product.getSeller().getFullName() : "Seller");
+        } else {
+            dto.put("sellerId", null);
+            dto.put("sellerName", "Unknown Seller");
+        }
+
+        dto.put("viewCount", product.getViewCount() != null ? product.getViewCount() : 0);
+        dto.put("soldCount", product.getSoldCount() != null ? product.getSoldCount() : 0);
+        dto.put("averageRating", product.getAverageRating() != null ? product.getAverageRating() : 0.0);
+        dto.put("reviewCount", product.getReviewCount() != null ? product.getReviewCount() : 0);
         dto.put("createdAt", product.getCreatedAt());
 
         if (product.getCarbonData() != null) {
             Map<String, Double> breakdown = new HashMap<>();
-            breakdown.put("manufacturing", product.getCarbonData().getManufacturing());
-            breakdown.put("transportation", product.getCarbonData().getTransportation());
-            breakdown.put("packaging", product.getCarbonData().getPackaging());
-            breakdown.put("usage", product.getCarbonData().getUsage());
-            breakdown.put("disposal", product.getCarbonData().getDisposal());
+            breakdown.put("manufacturing", product.getCarbonData().getManufacturing() != null ? product.getCarbonData().getManufacturing() : 0.0);
+            breakdown.put("transportation", product.getCarbonData().getTransportation() != null ? product.getCarbonData().getTransportation() : 0.0);
+            breakdown.put("packaging", product.getCarbonData().getPackaging() != null ? product.getCarbonData().getPackaging() : 0.0);
+            breakdown.put("usage", product.getCarbonData().getUsage() != null ? product.getCarbonData().getUsage() : 0.0);
+            breakdown.put("disposal", product.getCarbonData().getDisposal() != null ? product.getCarbonData().getDisposal() : 0.0);
             dto.put("carbonBreakdown", breakdown);
         }
 
