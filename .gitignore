@@ -1,0 +1,11 @@
+# IDE / Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc root artifacts
+package-lock.json
+node_modules/

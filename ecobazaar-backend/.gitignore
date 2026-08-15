@@ -1,8 +1,27 @@
 HELP.md
 target/
-.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+
+### Compiled artifacts ###
+*.jar
+*.war
+*.ear
+*.class
+
+### Logs ###
+*.log
+logs/
+
+### Environment & Secrets — NEVER commit these ###
+.env
+.env.local
+.env.*.local
+application-local.properties
+application-secret.properties
+
+### Uploaded files (local file storage) ###
+uploads/
 
 ### STS ###
 .apt_generated
@@ -14,7 +33,7 @@ target/
 .sts4-cache
 
 ### IntelliJ IDEA ###
-.idea
+.idea/
 *.iws
 *.iml
 *.ipr
@@ -31,3 +50,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### OS ###
+.DS_Store
+Thumbs.db
