@@ -1,37 +1,44 @@
 import { useEffect, useState } from 'react';
-import { Heart, ShoppingCart, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { Trash2, ShoppingCart, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import api from '../api/axios';
+import { getImageSrc, handleImageError } from '../utils/imageUtils';
 
 const Wishlist = () => {
     const { user } = useAuth();
     const { fetchCartCount } = useCart();
+    const navigate = useNavigate();
     const [wishlist, setWishlist] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!user) return;
+        if (!user) {
+            navigate('/login');
+            return;
+        }
+
         const fetchWishlist = async () => {
             try {
                 const response = await api.get(`/wishlist/${user.id}`);
-                setWishlist(response.data);
+                setWishlist(response.data?.items || []);
             } catch (error) {
                 console.error("Failed to load wishlist", error);
             } finally {
                 setLoading(false);
             }
         };
+
         fetchWishlist();
-    }, [user]);
+    }, [user, navigate]);
 
     const removeFromWishlist = async (productId) => {
         try {
             await api.delete(`/wishlist/${user.id}/${productId}`);
             setWishlist(wishlist.filter(item => item.productId !== productId));
         } catch (error) {
-            alert("Failed to remove item");
+            console.error("Failed to remove item", error);
         }
     };
 
@@ -67,29 +74,38 @@ const Wishlist = () => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {wishlist.map(item => (
-                        <div key={item.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col">
-                            <div className="relative h-48 mb-4 bg-gray-100 rounded-lg overflow-hidden">
-                                <img src={item.image} alt={item.productName} className="w-full h-full object-cover" />
+                    {wishlist.map(item => {
+                        const imgSrc = getImageSrc(item.image || item.imageUrl || item.imageBase64);
+                        return (
+                            <div key={item.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                                <div className="relative h-48 mb-4 bg-gray-100 rounded-lg overflow-hidden">
+                                    <img 
+                                        src={imgSrc} 
+                                        alt={item.productName} 
+                                        onError={handleImageError}
+                                        className="w-full h-full object-cover" 
+                                    />
+                                    <button 
+                                        onClick={() => removeFromWishlist(item.productId)}
+                                        className="absolute top-2 right-2 p-1.5 bg-white rounded-full text-gray-400 hover:text-red-500 shadow-sm"
+                                        title="Remove"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+
+                                <h3 className="font-bold text-gray-800 text-lg mb-1">{item.productName}</h3>
+                                <p className="text-eco-green font-bold mb-4">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</p>
+
                                 <button 
-                                    onClick={() => removeFromWishlist(item.productId)}
-                                    className="absolute top-2 right-2 p-2 bg-white rounded-full shadow hover:bg-red-50 text-gray-400 hover:text-red-500 transition"
+                                    onClick={() => moveToCart(item)}
+                                    className="mt-auto w-full bg-gray-900 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-eco-green transition text-sm"
                                 >
-                                    <Trash2 size={18} />
+                                    <ShoppingCart size={16} /> Move to Cart
                                 </button>
                             </div>
-                            
-                            <h3 className="font-bold text-lg mb-1 line-clamp-1">{item.productName}</h3>
-                            <p className="text-eco-green font-bold text-xl mb-4">${item.price.toFixed(2)}</p>
-                            
-                            <button 
-                                onClick={() => moveToCart(item)}
-                                className="mt-auto w-full bg-gray-900 text-white py-2 rounded-lg font-bold hover:bg-eco-green transition flex items-center justify-center gap-2"
-                            >
-                                <ShoppingCart size={18} /> Move to Cart
-                            </button>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

@@ -1,102 +1,90 @@
 import { useEffect, useState } from 'react';
-import { Users, ShoppingBag, Leaf, CheckCircle, ShieldAlert, Star, Trash2 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { ShieldAlert, CheckCircle, Star, Users, ShoppingBag, Leaf, Trash2 } from 'lucide-react';
 import api from '../api/axios';
+import { getImageSrc, handleImageError } from '../utils/imageUtils';
 
 const AdminDashboard = () => {
-    const { user } = useAuth();
-    const navigate = useNavigate();
-    
-    // UI State
-    const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'all'
-
-    // Data State
-    const [stats, setStats] = useState({
-        totalUsers: 0,
-        totalProducts: 0,
-        totalOrders: 0,
-        totalCarbonSaved: 0
-    });
+    const [stats, setStats] = useState({});
     const [pendingProducts, setPendingProducts] = useState([]);
-    const [allProducts, setAllProducts] = useState([]); // <--- NEW: Store all products
+    const [allProducts, setAllProducts] = useState([]);
+    const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'all'
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (user && user.role !== 'ADMIN') {
-            navigate('/');
-            return;
-        }
-
-        const fetchData = async () => {
-            try {
-                // 1. Fetch Stats
-                const statsRes = await api.get('/carbon/admin/summary');
-                setStats(statsRes.data || {});
-
-                // 2. Fetch Pending Products
-                const pendingRes = await api.get('/products/admin/pending');
-                setPendingProducts(pendingRes.data || []);
-
-                // 3. Fetch ALL Products (for Feature management)
-                // We ask for a larger size to see more items
-                const allRes = await api.get('/products?size=100');
-                // The search API returns { products: [...], totalPages: ... }
-                setAllProducts(allRes.data.products || []);
-
-            } catch (error) {
-                console.error("Admin Load Error:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (user) fetchData();
-    }, [user, navigate]);
-
-    // --- Actions ---
-
-    const handleVerify = async (productId) => {
+    const fetchData = async () => {
         try {
-            await api.put(`/products/admin/verify/${productId}?adminId=${user.id}`);
-            // Remove from pending list
-            setPendingProducts(pendingProducts.filter(p => p.id !== productId));
-            // Refresh the "All Products" list to show it's verified
-            const refreshRes = await api.get('/products?size=100');
-            setAllProducts(refreshRes.data.products || []);
-            alert("Product Verified!");
+            // 1. Fetch Stats
+            const statsRes = await api.get('/admin/stats');
+            setStats(statsRes.data || {});
+
+            // 2. Fetch Pending Approvals
+            const pendingRes = await api.get('/products/admin/pending');
+            setPendingProducts(Array.isArray(pendingRes.data) ? pendingRes.data : []);
+
+            // 3. Fetch All Products (for featured toggling)
+            const allRes = await api.get('/products');
+            setAllProducts(allRes.data?.products || []);
+
         } catch (error) {
-            alert("Failed to verify product.");
+            console.error("Admin data fetch error", error);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleToggleFeature = async (productId) => {
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    // 1. Verify / Approve Product
+    const handleVerify = async (productId) => {
         try {
-            // Call the toggle endpoint
-            await api.put(`/products/${productId}/feature?adminId=${user.id}`);
-            
-            // Update UI instantly (Optimistic update)
+            await api.put(`/products/admin/verify/${productId}`, null, {
+                params: { adminId: 1 } // Hardcoded admin ID for now
+            });
+            alert("Product Approved & Live!");
+            // Remove from pending list immediately
+            setPendingProducts(pendingProducts.filter(p => p.id !== productId));
+        } catch (error) {
+            alert("Failed to verify product");
+        }
+    };
+
+    // 2. Toggle Featured Product
+    const handleToggleFeatured = async (productId) => {
+        try {
+            await api.put(`/products/${productId}/feature`, null, {
+                params: { adminId: 1 }
+            });
+            // Toggle locally in state
             setAllProducts(allProducts.map(p => 
                 p.id === productId ? { ...p, featured: !p.featured } : p
             ));
         } catch (error) {
-            console.error(error);
-            alert("Failed to update feature status");
+            alert("Failed to update featured status");
         }
     };
 
+    // 3. Delete Product (Admin Override)
     const handleDelete = async (productId) => {
-        if(!window.confirm("Delete this product permanently?")) return;
+        if(!window.confirm("Admin Action: Are you sure you want to permanently delete this product?")) return;
         try {
-            await api.delete(`/products/${productId}?userId=${user.id}`);
+            await api.delete(`/products/${productId}`, {
+                params: { userId: 1 } // Admin ID
+            });
             setAllProducts(allProducts.filter(p => p.id !== productId));
+            setPendingProducts(pendingProducts.filter(p => p.id !== productId));
         } catch (error) {
-            alert("Delete failed");
+            alert("Failed to delete product");
         }
     };
 
-    // Helper
-    const formatNumber = (num) => (num ? num.toFixed(1) : '0.0');
+    // Helper function to safely format numbers
+    const formatNumber = (value) => {
+        if (value === null || value === undefined || isNaN(value)) {
+            return '0';
+        }
+        return Number(value).toFixed(1);
+    };
 
     if (loading) return <div className="text-center py-20">Loading Admin Panel...</div>;
 
@@ -174,84 +162,99 @@ const AdminDashboard = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {pendingProducts.map(product => (
-                                    <tr key={product.id} className="hover:bg-gray-50 transition">
-                                        <td className="p-4 flex items-center gap-3">
-                                            <img src={product.imageUrl} alt={product.name} className="w-10 h-10 rounded object-cover border" />
-                                            <span className="font-bold text-gray-800">{product.name}</span>
-                                        </td>
-                                        <td className="p-4 text-sm text-gray-600">{product.sellerId}</td>
-                                        <td className="p-4 font-medium">${product.price}</td>
-                                        <td className="p-4 text-eco-green font-medium">{product.carbonFootprint} kg</td>
-                                        <td className="p-4 text-right">
-                                            <button 
-                                                onClick={() => handleVerify(product.id)}
-                                                className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition"
-                                            >
-                                                Verify
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {pendingProducts.map(product => {
+                                    const imgSrc = getImageSrc(product.imageBase64 || product.image || product.imageUrl);
+                                    return (
+                                        <tr key={product.id} className="hover:bg-gray-50 transition">
+                                            <td className="p-4 flex items-center gap-3">
+                                                <img 
+                                                    src={imgSrc} 
+                                                    alt={product.name} 
+                                                    onError={handleImageError}
+                                                    className="w-10 h-10 rounded object-cover border" 
+                                                />
+                                                <span className="font-bold text-gray-800">{product.name}</span>
+                                            </td>
+                                            <td className="p-4 text-sm text-gray-600">{product.sellerId}</td>
+                                            <td className="p-4 font-medium">${typeof product.price === 'number' ? product.price.toFixed(2) : product.price}</td>
+                                            <td className="p-4 text-eco-green font-medium">{product.carbonFootprint} kg</td>
+                                            <td className="p-4 text-right">
+                                                <button 
+                                                    onClick={() => handleVerify(product.id)}
+                                                    className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700 transition"
+                                                >
+                                                    Approve
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     )}
                 </div>
             )}
 
-            {/* --- TAB CONTENT: ALL PRODUCTS (FEATURE MANAGEMENT) --- */}
+            {/* --- TAB CONTENT: ALL PRODUCTS --- */}
             {activeTab === 'all' && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <table className="w-full text-left">
                         <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
                             <tr>
                                 <th className="p-4">Product</th>
+                                <th className="p-4">Price</th>
                                 <th className="p-4">Status</th>
-                                <th className="p-4 text-center">Featured?</th>
-                                <th className="p-4 text-right">Actions</th>
+                                <th className="p-4">Featured</th>
+                                <th className="p-4 text-right">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {allProducts.map(product => (
-                                <tr key={product.id} className="hover:bg-gray-50 transition">
-                                    <td className="p-4 flex items-center gap-3">
-                                        <img src={product.imageUrl} alt={product.name} className="w-10 h-10 rounded object-cover border" />
-                                        <div>
-                                            <span className="font-bold text-gray-800 block">{product.name}</span>
-                                            <span className="text-xs text-gray-500">{product.category}</span>
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                            product.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                                        }`}>
-                                            {product.verified ? 'Verified' : 'Pending'}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-center">
-                                        <button 
-                                            onClick={() => handleToggleFeature(product.id)}
-                                            className={`p-2 rounded-full transition ${
-                                                product.featured 
-                                                ? 'bg-yellow-100 text-yellow-500 hover:bg-yellow-200' 
-                                                : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                            }`}
-                                            title="Toggle Featured Status"
-                                        >
-                                            <Star size={20} fill={product.featured ? "currentColor" : "none"} />
-                                        </button>
-                                    </td>
-                                    <td className="p-4 text-right">
-                                        <button 
-                                            onClick={() => handleDelete(product.id)}
-                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-                                            title="Delete Product"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {allProducts.map(product => {
+                                const imgSrc = getImageSrc(product.imageBase64 || product.image || product.imageUrl);
+                                return (
+                                    <tr key={product.id} className="hover:bg-gray-50 transition">
+                                        <td className="p-4 flex items-center gap-3">
+                                            <img 
+                                                src={imgSrc} 
+                                                alt={product.name} 
+                                                onError={handleImageError}
+                                                className="w-10 h-10 rounded object-cover border" 
+                                            />
+                                            <span className="font-medium text-gray-800">{product.name}</span>
+                                        </td>
+                                        <td className="p-4">${typeof product.price === 'number' ? product.price.toFixed(2) : product.price}</td>
+                                        <td className="p-4">
+                                            <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                                product.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                                            }`}>
+                                                {product.verified ? 'Verified' : 'Pending'}
+                                            </span>
+                                        </td>
+                                        <td className="p-4">
+                                            <button 
+                                                onClick={() => handleToggleFeatured(product.id)}
+                                                className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition ${
+                                                    product.featured 
+                                                        ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' 
+                                                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                <Star size={12} className={product.featured ? "fill-current text-yellow-600" : ""} />
+                                                {product.featured ? 'Featured' : 'Standard'}
+                                            </button>
+                                        </td>
+                                        <td className="p-4 text-right">
+                                            <button 
+                                                onClick={() => handleDelete(product.id)}
+                                                className="text-red-500 hover:text-red-700 p-2"
+                                                title="Delete Product"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

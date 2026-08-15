@@ -1,12 +1,13 @@
 import { ShoppingCart, Leaf } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useCart } from '../context/CartContext'; // <--- Import
+import { useCart } from '../context/CartContext';
 import api from '../api/axios';
+import { getImageSrc, handleImageError } from '../utils/imageUtils';
 
 const ProductCard = ({ product }) => {
     const { user } = useAuth();
-    const { fetchCartCount } = useCart(); // <--- Get Refresh Function
+    const { fetchCartCount } = useCart();
 
     const addToCart = async () => {
         if (!user) {
@@ -20,7 +21,7 @@ const ProductCard = ({ product }) => {
                 quantity: 1
             });
             
-            await fetchCartCount(); // <--- REFRESH THE BADGE!
+            await fetchCartCount();
             alert("Added to Cart!");
         } catch (error) {
             console.error("Add to cart failed", error);
@@ -28,14 +29,17 @@ const ProductCard = ({ product }) => {
         }
     };
 
+    const imageSource = getImageSrc(product.imageBase64 || product.image || product.imageUrl);
+
     return (
         <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition border border-gray-100 overflow-hidden flex flex-col h-full">
             <div className="h-48 overflow-hidden bg-gray-100 relative group">
                 <img 
-  src={product.imageUrl} 
-  alt={product.name} 
-  className="w-full h-full object-contain transition duration-300"
-/>
+                    src={imageSource} 
+                    alt={product.name} 
+                    onError={handleImageError}
+                    className="w-full h-full object-contain transition duration-300"
+                />
 
                 <div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold text-white
                     ${product.ecoRating === 'A+' ? 'bg-green-600' : 
@@ -65,7 +69,7 @@ const ProductCard = ({ product }) => {
 
                 <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-100">
                     <span className="text-xl font-bold text-gray-900">
-                        ${product.price.toFixed(2)}
+                        ${typeof product.price === 'number' ? product.price.toFixed(2) : product.price}
                     </span>
                     
                     {user?.role === 'SELLER' ? (
