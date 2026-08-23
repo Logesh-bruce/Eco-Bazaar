@@ -39,7 +39,7 @@ public class Product {
     private Integer quantity = 1;
 
     // Store Base64 encoded image directly in database as TEXT (without @Lob to avoid PostgreSQL OID issues)
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "image_base64", columnDefinition = "TEXT")
     private String imageBase64;
 
     @Column(name = "category", length = 100, columnDefinition = "VARCHAR(100)")
@@ -57,7 +57,7 @@ public class Product {
     private boolean verified = false;
 
     // Explicit approval status ("PENDING", "APPROVED", "REJECTED")
-    @Column(name = "status", length = 50)
+    @Column(name = "status", length = 50, columnDefinition = "VARCHAR(50)")
     private String status = "PENDING";
 
     @Column(nullable = false)

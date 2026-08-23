@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import api from '../api/axios';
-import { getImageSrc, handleImageError } from '../utils/imageUtils';
+import { getProductImage, handleImageError } from '../utils/imageUtils';
 
 const ProductCard = ({ product }) => {
     const { user } = useAuth();
@@ -29,7 +29,7 @@ const ProductCard = ({ product }) => {
         }
     };
 
-    const imageSource = getImageSrc(product.imageBase64 || product.image || product.imageUrl);
+    const imageSource = getProductImage(product);
 
     return (
         <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition border border-gray-100 overflow-hidden flex flex-col h-full">

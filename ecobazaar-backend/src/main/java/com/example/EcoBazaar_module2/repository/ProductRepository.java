@@ -26,15 +26,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByVerifiedTrueAndActiveTrue(Pageable pageable);
 
     // Pending products query handling status and verified flags
-    @Query("SELECT p FROM Product p WHERE p.verified = false OR p.verified IS NULL OR UPPER(p.status) = 'PENDING' OR p.status IS NULL")
+    @Query("SELECT p FROM Product p WHERE p.verified = false OR p.verified IS NULL OR p.status IN ('PENDING', 'pending') OR p.status IS NULL")
     List<Product> findPendingProducts();
 
     // Approved products query
-    @Query("SELECT p FROM Product p WHERE p.verified = true OR UPPER(p.status) = 'APPROVED'")
+    @Query("SELECT p FROM Product p WHERE p.verified = true OR p.status IN ('APPROVED', 'approved', 'ACTIVE', 'active', 'VERIFIED', 'verified')")
     List<Product> findApprovedProducts();
 
     // Shop products: all products that should be visible in the storefront
-    @Query("SELECT p FROM Product p WHERE p.verified = true OR LOWER(p.status) IN ('approved', 'active', 'verified', 'pending') OR p.status IS NULL")
+    @Query("SELECT p FROM Product p WHERE (p.verified = true OR p.status IN ('APPROVED', 'ACTIVE', 'VERIFIED', 'PENDING', 'approved', 'active', 'verified', 'pending') OR p.status IS NULL) AND (p.active = true OR p.active IS NULL)")
     List<Product> findShopProducts();
 
     /**
@@ -43,10 +43,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
      * Supports sorting via Pageable
      */
     @Query("SELECT p FROM Product p WHERE " +
-            "(p.verified = true OR LOWER(p.status) IN ('approved', 'active', 'verified', 'pending') OR p.status IS NULL) AND " +
+            "(p.verified = true OR p.status IN ('APPROVED', 'ACTIVE', 'VERIFIED', 'PENDING', 'approved', 'active', 'verified', 'pending') OR p.status IS NULL) AND " +
             "(p.active = true OR p.active IS NULL) AND " +
-            "(:name IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
-            "(:category IS NULL OR p.category = :category) AND " +
+            "(:name IS NULL OR :name = '' OR LOWER(CAST(p.name AS string)) LIKE LOWER(CONCAT('%', CAST(:name AS string), '%'))) AND " +
+            "(:category IS NULL OR :category = '' OR :category = 'All' OR :category = 'All Categories' OR LOWER(CAST(p.category AS string)) = LOWER(CAST(:category AS string))) AND " +
             "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
             "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
             "(:featured IS NULL OR p.featured = :featured)")
@@ -63,10 +63,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
      * Search products with carbon footprint filter using COALESCE for null-safety
      */
     @Query("SELECT p FROM Product p LEFT JOIN p.carbonData cd WHERE " +
-            "(p.verified = true OR LOWER(p.status) IN ('approved', 'active', 'verified', 'pending') OR p.status IS NULL) AND " +
+            "(p.verified = true OR p.status IN ('APPROVED', 'ACTIVE', 'VERIFIED', 'PENDING', 'approved', 'active', 'verified', 'pending') OR p.status IS NULL) AND " +
             "(p.active = true OR p.active IS NULL) AND " +
-            "(:name IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
-            "(:category IS NULL OR p.category = :category) AND " +
+            "(:name IS NULL OR :name = '' OR LOWER(CAST(p.name AS string)) LIKE LOWER(CONCAT('%', CAST(:name AS string), '%'))) AND " +
+            "(:category IS NULL OR :category = '' OR :category = 'All' OR :category = 'All Categories' OR LOWER(CAST(p.category AS string)) = LOWER(CAST(:category AS string))) AND " +
             "(:minPrice IS NULL OR p.price >= :minPrice) AND " +
             "(:maxPrice IS NULL OR p.price <= :maxPrice) AND " +
             "(:minCarbon IS NULL OR (COALESCE(cd.manufacturing, 0.0) + COALESCE(cd.transportation, 0.0) + COALESCE(cd.packaging, 0.0) + COALESCE(cd.usage, 0.0) + COALESCE(cd.disposal, 0.0)) >= :minCarbon) AND " +
