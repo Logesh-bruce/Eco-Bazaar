@@ -25,22 +25,25 @@ const Shop = () => {
             // Build Query String
             const params = new URLSearchParams();
             
-            // FIX 1: Changed 'name' to 'search' to match ProductController
-            if (search) params.append('search', search); 
+            if (search && search.trim()) params.append('search', search.trim()); 
             
-            if (category !== 'All') params.append('category', category);
+            if (category && category !== 'All' && category !== 'All Categories') {
+                params.append('category', category.trim());
+            }
             if (maxPrice < 1000) params.append('maxPrice', maxPrice);
             if (maxCarbon < 100) params.append('maxCarbon', maxCarbon);
-            params.append('sortBy', sort);
+            if (sort) params.append('sortBy', sort);
             
             // Call the Search API
             const response = await api.get(`/products?${params.toString()}`);
             
-            // FIX 2: Correctly extract the list from the "products" key
-            // The controller returns { products: [...], totalPages: ... }
-            const data = response.data.products || []; 
+            // Handle both raw array, paginated { products: [...] }, and Spring Data { content: [...] }
+            const resData = response.data;
+            const items = Array.isArray(resData) 
+                ? resData 
+                : (resData?.products || resData?.content || []);
             
-            setProducts(data);
+            setProducts(items);
         } catch (error) {
             console.error("Shop Load Error:", error);
             setProducts([]); // Safety fallback

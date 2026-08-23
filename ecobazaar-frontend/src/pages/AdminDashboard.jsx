@@ -17,12 +17,26 @@ const AdminDashboard = () => {
             setStats(statsRes.data || {});
 
             // 2. Fetch Pending Approvals
-            const pendingRes = await api.get('/products/admin/pending');
-            setPendingProducts(Array.isArray(pendingRes.data) ? pendingRes.data : []);
+            let pendingItems = [];
+            try {
+                const pendingRes = await api.get('/admin/products/pending');
+                pendingItems = Array.isArray(pendingRes.data) 
+                    ? pendingRes.data 
+                    : (pendingRes.data?.products || pendingRes.data?.content || []);
+            } catch (err) {
+                const pendingRes = await api.get('/products/admin/pending');
+                pendingItems = Array.isArray(pendingRes.data) 
+                    ? pendingRes.data 
+                    : (pendingRes.data?.products || pendingRes.data?.content || []);
+            }
+            setPendingProducts(pendingItems);
 
             // 3. Fetch All Products (for featured toggling)
             const allRes = await api.get('/products');
-            setAllProducts(allRes.data?.products || []);
+            const allItems = Array.isArray(allRes.data) 
+                ? allRes.data 
+                : (allRes.data?.products || allRes.data?.content || []);
+            setAllProducts(allItems);
 
         } catch (error) {
             console.error("Admin data fetch error", error);
@@ -38,14 +52,21 @@ const AdminDashboard = () => {
     // 1. Verify / Approve Product
     const handleVerify = async (productId) => {
         try {
-            await api.put(`/products/admin/verify/${productId}`, null, {
-                params: { adminId: 1 } // Hardcoded admin ID for now
-            });
+            try {
+                await api.put(`/admin/products/${productId}/approve`, null, {
+                    params: { adminId: 1 } // Hardcoded admin ID for now
+                });
+            } catch (err) {
+                await api.put(`/products/admin/verify/${productId}`, null, {
+                    params: { adminId: 1 }
+                });
+            }
             alert("Product Approved & Live!");
-            // Remove from pending list immediately
-            setPendingProducts(pendingProducts.filter(p => p.id !== productId));
+            // Refresh dashboard data
+            fetchData();
         } catch (error) {
-            alert("Failed to verify product");
+            console.error("Verification error:", error);
+            alert("Failed to verify product: " + (error.response?.data?.error || error.message));
         }
     };
 

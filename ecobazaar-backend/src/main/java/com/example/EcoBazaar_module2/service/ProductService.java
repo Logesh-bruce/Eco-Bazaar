@@ -37,21 +37,39 @@ public class ProductService {
                                                 Double maxPrice, Double minCarbon, Double maxCarbon,
                                                 Boolean featured, String sortBy, int page, int size) {
         String cleanName = (name != null && !name.trim().isEmpty()) ? name.trim() : null;
-        String cleanCategory = (category != null && !category.equalsIgnoreCase("All") && !category.trim().isEmpty()) ? category.trim() : null;
+
+        String cleanCategory = null;
+        if (category != null && !category.trim().isEmpty()) {
+            String catTrim = category.trim();
+            if (!catTrim.equalsIgnoreCase("all") && 
+                !catTrim.equalsIgnoreCase("all categories") &&
+                !catTrim.equalsIgnoreCase("null") &&
+                !catTrim.equalsIgnoreCase("undefined")) {
+                cleanCategory = catTrim;
+            }
+        }
+
+        // Clean Price filters (bypass default or invalid limits)
+        Double cleanMinPrice = (minPrice != null && minPrice > 0.0) ? minPrice : null;
+        Double cleanMaxPrice = (maxPrice != null && maxPrice > 0.0 && maxPrice < 1000.0) ? maxPrice : null;
+
+        // Clean Carbon filters (bypass default or invalid limits)
+        Double cleanMinCarbon = (minCarbon != null && minCarbon > 0.0) ? minCarbon : null;
+        Double cleanMaxCarbon = (maxCarbon != null && maxCarbon > 0.0 && maxCarbon < 100.0) ? maxCarbon : null;
 
         // Determine sort order
         Sort sort = getSortOrder(sortBy);
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), sort);
 
         // Use carbon filter query if carbon parameters are provided
-        if (minCarbon != null || maxCarbon != null) {
+        if (cleanMinCarbon != null || cleanMaxCarbon != null) {
             return productRepository.searchProductsWithCarbonFilter(
                     cleanName,
                     cleanCategory,
-                    minPrice,
-                    maxPrice,
-                    minCarbon,
-                    maxCarbon,
+                    cleanMinPrice,
+                    cleanMaxPrice,
+                    cleanMinCarbon,
+                    cleanMaxCarbon,
                     featured,
                     pageable
             );
@@ -59,8 +77,8 @@ public class ProductService {
             return productRepository.searchProducts(
                     cleanName,
                     cleanCategory,
-                    minPrice,
-                    maxPrice,
+                    cleanMinPrice,
+                    cleanMaxPrice,
                     featured,
                     pageable
             );

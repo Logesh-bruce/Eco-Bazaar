@@ -52,7 +52,7 @@ public class AdminController {
             }
 
             List<Product> pendingProducts = productService.getPendingProducts();
-            long pendingCount = pendingProducts != null ? pendingProducts.size() : 0;
+            long pendingCount = (pendingProducts != null) ? pendingProducts.size() : 0L;
 
             stats.put("totalUsers", totalUsers);
             stats.put("totalProducts", totalProducts);
@@ -95,7 +95,7 @@ public class AdminController {
      * PUT /api/admin/products/{id}/approve or /verify
      * Approves a product and sets status to APPROVED
      */
-    @PutMapping(value = {"/products/{id}/approve", "/products/{id}/verify", "/verify/{id}"})
+    @PutMapping(value = {"/products/{id}/approve", "/products/{id}/verify", "/verify/{id}", "/{id}/approve", "/{id}/verify"})
     public ResponseEntity<?> approveProduct(
             @PathVariable Long id,
             @RequestParam(required = false, defaultValue = "1") Long adminId) {
@@ -119,12 +119,39 @@ public class AdminController {
         dto.put("name", product.getName() != null ? product.getName() : "");
         dto.put("description", product.getDescription() != null ? product.getDescription() : "");
         dto.put("price", product.getPrice() != null ? product.getPrice() : 0.0);
-        dto.put("quantity", product.getQuantity() != null ? product.getQuantity() : 0);
-        dto.put("imageUrl", product.getImageUrl() != null ? product.getImageUrl() : "");
-        dto.put("category", product.getCategory() != null ? product.getCategory() : "");
-        dto.put("status", product.getStatus() != null ? product.getStatus() : (product.isVerified() ? "APPROVED" : "PENDING"));
+
+        int qty = product.getQuantity() != null ? product.getQuantity() : 0;
+        dto.put("quantity", qty);
+        dto.put("stock", qty);
+
+        String placeholder = "https://placehold.co/300x300?text=Eco+Product";
+        String imgUrl = (product.getImageUrl() != null && !product.getImageUrl().trim().isEmpty()) 
+                ? product.getImageUrl().trim() 
+                : placeholder;
+        String imgBase64 = (product.getImageBase64() != null && !product.getImageBase64().trim().isEmpty()) 
+                ? product.getImageBase64().trim() 
+                : imgUrl;
+
+        dto.put("imageUrl", imgUrl);
+        dto.put("image", imgUrl);
+        dto.put("imageBase64", imgBase64);
+
+        String category = product.getCategory() != null ? product.getCategory() : "";
+        dto.put("category", category);
+        dto.put("categoryName", category);
+
+        Double carbon = product.getTotalCarbonFootprint() != null ? product.getTotalCarbonFootprint() : 0.0;
+        dto.put("carbonFootprint", carbon);
+        dto.put("carbonScore", carbon);
+
+        dto.put("ecoRating", product.getEcoRating() != null ? product.getEcoRating() : "A+");
+
+        String status = product.getStatus() != null ? product.getStatus() : (product.isVerified() ? "APPROVED" : "PENDING");
+        dto.put("status", status);
         dto.put("verified", product.isVerified());
+        dto.put("isApproved", product.isVerified() || "APPROVED".equalsIgnoreCase(status));
         dto.put("featured", product.isFeatured());
+        dto.put("active", product.isActive());
 
         if (product.getSeller() != null) {
             dto.put("sellerId", product.getSeller().getId());
@@ -134,8 +161,6 @@ public class AdminController {
             dto.put("sellerName", "Seller");
         }
 
-        dto.put("carbonFootprint", product.getTotalCarbonFootprint() != null ? product.getTotalCarbonFootprint() : 0.0);
-        dto.put("ecoRating", product.getEcoRating() != null ? product.getEcoRating() : "A+");
         dto.put("viewCount", product.getViewCount() != null ? product.getViewCount() : 0);
         dto.put("soldCount", product.getSoldCount() != null ? product.getSoldCount() : 0);
         dto.put("averageRating", product.getAverageRating() != null ? product.getAverageRating() : 0.0);

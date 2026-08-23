@@ -200,7 +200,7 @@ public class ProductController {
         }
     }
 
-    @GetMapping("/admin/pending")
+    @GetMapping({"/admin/pending", "/pending"})
     public ResponseEntity<List<Map<String, Object>>> getPendingProducts() {
         try {
             List<Product> products = productService.getPendingProducts();
@@ -216,7 +216,7 @@ public class ProductController {
         }
     }
 
-    @PutMapping({"/admin/verify/{id}", "/admin/approve/{id}"})
+    @PutMapping({"/admin/verify/{id}", "/admin/approve/{id}", "/{id}/verify", "/{id}/approve"})
     public ResponseEntity<?> verifyProduct(@PathVariable Long id, @RequestParam(required = false, defaultValue = "1") Long adminId) {
         try {
             Product product = productService.verifyProduct(adminId, id);
@@ -230,7 +230,7 @@ public class ProductController {
     }
 
     /**
-     * Map entity to clean DTO map with comprehensive null-safety checks
+     * Map entity to clean DTO map with comprehensive null-safety checks and field aliases
      */
     private Map<String, Object> toProductDTO(Product product) {
         return toProductDTOWithFallbackSeller(product, null);
@@ -245,15 +245,39 @@ public class ProductController {
         dto.put("name", product.getName() != null ? product.getName() : "");
         dto.put("description", product.getDescription() != null ? product.getDescription() : "");
         dto.put("price", product.getPrice() != null ? product.getPrice() : 0.0);
-        dto.put("quantity", product.getQuantity() != null ? product.getQuantity() : 0);
-        dto.put("imageUrl", product.getImageUrl() != null ? product.getImageUrl() : "");
-        dto.put("imageBase64", product.getImageBase64() != null ? product.getImageBase64() : "");
-        dto.put("category", product.getCategory() != null ? product.getCategory() : "");
-        dto.put("carbonFootprint", product.getTotalCarbonFootprint() != null ? product.getTotalCarbonFootprint() : 0.0);
+
+        int qty = product.getQuantity() != null ? product.getQuantity() : 0;
+        dto.put("quantity", qty);
+        dto.put("stock", qty);
+
+        String placeholder = "https://placehold.co/300x300?text=Eco+Product";
+        String imgUrl = (product.getImageUrl() != null && !product.getImageUrl().trim().isEmpty()) 
+                ? product.getImageUrl().trim() 
+                : placeholder;
+        String imgBase64 = (product.getImageBase64() != null && !product.getImageBase64().trim().isEmpty()) 
+                ? product.getImageBase64().trim() 
+                : imgUrl;
+
+        dto.put("imageUrl", imgUrl);
+        dto.put("image", imgUrl);
+        dto.put("imageBase64", imgBase64);
+
+        String category = product.getCategory() != null ? product.getCategory() : "";
+        dto.put("category", category);
+        dto.put("categoryName", category);
+
+        Double carbon = product.getTotalCarbonFootprint() != null ? product.getTotalCarbonFootprint() : 0.0;
+        dto.put("carbonFootprint", carbon);
+        dto.put("carbonScore", carbon);
+
         dto.put("ecoRating", product.getEcoRating() != null ? product.getEcoRating() : "A+");
-        dto.put("status", product.getStatus() != null ? product.getStatus() : (product.isVerified() ? "APPROVED" : "PENDING"));
+
+        String status = product.getStatus() != null ? product.getStatus() : (product.isVerified() ? "APPROVED" : "PENDING");
+        dto.put("status", status);
         dto.put("verified", product.isVerified());
+        dto.put("isApproved", product.isVerified() || "APPROVED".equalsIgnoreCase(status));
         dto.put("featured", product.isFeatured());
+        dto.put("active", product.isActive());
 
         // Safe seller null checks with fallback ID
         if (product.getSeller() != null) {

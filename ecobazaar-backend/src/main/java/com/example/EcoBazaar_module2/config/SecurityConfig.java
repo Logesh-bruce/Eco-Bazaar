@@ -79,19 +79,17 @@ public class SecurityConfig {
                                 "/js/**"
                         ).permitAll()
 
-                        // 3. Public product browsing — must come BEFORE admin matchers
-                        .requestMatchers(HttpMethod.GET, "/api/products").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/products/featured").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/products/seller/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/products/{id}").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/carbon/**").permitAll()
-
-                        // 4. Admin endpoints — allow ADMIN or ROLE_ADMIN
+                        // 3. Admin endpoints — allow ADMIN or ROLE_ADMIN (evaluated before general routes)
                         .requestMatchers("/api/admin/**").hasAnyAuthority("ADMIN", "ROLE_ADMIN")
                         .requestMatchers("/api/products/admin/**").hasAnyAuthority("ADMIN", "ROLE_ADMIN")
                         .requestMatchers("/api/dashboard/admin/**").hasAnyAuthority("ADMIN", "ROLE_ADMIN")
+
+                        // 4. Public product browsing & catalog data
+                        .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/carbon/**").permitAll()
 
                         // 5. Product creation — only SELLER or ADMIN roles
                         .requestMatchers(HttpMethod.POST, "/api/products/add").hasAnyAuthority("SELLER", "ROLE_SELLER", "ADMIN", "ROLE_ADMIN")
