@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -62,6 +63,7 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         // 1. Explicitly permit all HTTP OPTIONS preflight requests first
@@ -77,16 +79,25 @@ public class SecurityConfig {
                                 "/js/**"
                         ).permitAll()
 
-                        // 3. Admin endpoints — allow ADMIN or ROLE_ADMIN
+                        // 3. Public product browsing — must come BEFORE admin matchers
+                        .requestMatchers(HttpMethod.GET, "/api/products").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products/featured").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products/seller/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products/{id}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/carbon/**").permitAll()
+
+                        // 4. Admin endpoints — allow ADMIN or ROLE_ADMIN
                         .requestMatchers("/api/admin/**").hasAnyAuthority("ADMIN", "ROLE_ADMIN")
                         .requestMatchers("/api/products/admin/**").hasAnyAuthority("ADMIN", "ROLE_ADMIN")
                         .requestMatchers("/api/dashboard/admin/**").hasAnyAuthority("ADMIN", "ROLE_ADMIN")
 
-                        // 4. Product creation — only SELLER or ADMIN roles
+                        // 5. Product creation — only SELLER or ADMIN roles
                         .requestMatchers(HttpMethod.POST, "/api/products/add").hasAnyAuthority("SELLER", "ROLE_SELLER", "ADMIN", "ROLE_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/products/**").hasAnyAuthority("SELLER", "ROLE_SELLER", "ADMIN", "ROLE_ADMIN")
 
-                        // 5. All other endpoints are permitted (controllers handle their own auth checks)
+                        // 6. All other endpoints are permitted (controllers handle their own auth checks)
                         .anyRequest().permitAll()
                 )
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()));
