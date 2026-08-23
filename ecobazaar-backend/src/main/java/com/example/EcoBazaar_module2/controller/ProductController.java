@@ -247,6 +247,7 @@ public class ProductController {
         dto.put("price", product.getPrice() != null ? product.getPrice() : 0.0);
         dto.put("quantity", product.getQuantity() != null ? product.getQuantity() : 0);
         dto.put("imageUrl", product.getImageUrl() != null ? product.getImageUrl() : "");
+        dto.put("imageBase64", product.getImageBase64() != null ? product.getImageBase64() : "");
         dto.put("category", product.getCategory() != null ? product.getCategory() : "");
         dto.put("carbonFootprint", product.getTotalCarbonFootprint() != null ? product.getTotalCarbonFootprint() : 0.0);
         dto.put("ecoRating", product.getEcoRating() != null ? product.getEcoRating() : "A+");
